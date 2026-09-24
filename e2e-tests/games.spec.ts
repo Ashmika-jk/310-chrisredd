@@ -1,6 +1,38 @@
 import { test, expect, type Response } from '@playwright/test';
 
 test.describe('Game Listing and Navigation', () => {
+  test('should filter games by category and publisher', async ({ page }) => {
+    await page.goto('/');
+    const allCards = page.locator('[data-testid="game-card"]:visible');
+    const allCount = await allCards.count();
+
+    await test.step('Filter by category', async () => {
+      await page.getByTestId('category-filter-1').getByRole('checkbox').check();
+      await page.getByTestId('apply-filters').click();
+      await expect(page).toHaveURL(/category=1/);
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(4);
+    });
+
+    await test.step('Combine category and publisher filters', async () => {
+      await page.getByTestId('publisher-filter').selectOption({ label: 'CodeForge Studios' });
+      await page.getByTestId('apply-filters').click();
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(1);
+    });
+
+    await test.step('Clear filters', async () => {
+      await page.getByTestId('clear-filters').click();
+      await expect(page).toHaveURL('/');
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(allCount);
+    });
+  });
+
+  test('should show an empty state when filters have no matches', async ({ page }) => {
+    await page.goto('/?category=1&publisher=99999');
+
+    await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(0);
+    await expect(page.getByTestId('filtered-empty-state')).toContainText('No games match the selected filters.');
+  });
+
   test('should display games with titles on index page', async ({ page }) => {
     await test.step('Navigate to homepage', async () => {
       await page.goto('/');
